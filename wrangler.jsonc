@@ -1,0 +1,18 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "receptenmaker-mcp",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "durable_objects": {
+    "bindings": [{ "name": "MCP_OBJECT", "class_name": "ReceptenmakerMCP" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReceptenmakerMCP"] }],
+  // Create with: npx wrangler kv namespace create OAUTH_KV
+  // or in the dashboard under Storage & Databases > KV, then paste the id here.
+  "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
+  // `agents` lazily imports the optional `ai` package in a code path this server never
+  // reaches; see src/shims/ai.ts.
+  "alias": { "ai": "./src/shims/ai.ts" },
+  "observability": { "enabled": true }
+}

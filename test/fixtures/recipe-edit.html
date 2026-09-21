@@ -1,0 +1,223 @@
+<div class="wrap">
+<form action="?save-recipe=true" method="post" id="recipe-options-form">
+
+                            <div class="postbox">
+
+                                <div class="handlediv" title="Click to toggle"><br></div>
+
+                                <div class="inside">
+
+                                               <input type="hidden" class="textInput" id="id" name="rm_recipe_options[id]" value="4166830" />
+        <p class="">
+        <label for="rm_recipe_options[receptNaam]">Receptnaam</label>
+        <input type="input" class="textInput" id="receptNaam" name="rm_recipe_options[receptNaam]" value="Groentesoep met linzen" />
+    </p>
+        <p class="">
+        <label for="rm_recipe_options[ingredienten]">Ingredienten        </label>
+        <br/><span class="inputTip">Voer de ingredienten regel voor regel in en zet het aantal vooraan. Bijv. 400 gram appels. Kopjes maak je door -- er voor te zetten.</span>        <textarea  placeholder="--Taart&#10;6 appels &#10;300 gram bloem&#10;200 gram boter&#10;--Saus&#10;1 vanillestokje&#10;2dl kookroom &#10;40 gram witte basterdsuiker" style="width:100%;min-height:6em;" id="Ingredienten" name="rm_recipe_options[ingredienten]">- 400 g linzen
+- 2 winterpenen
+- 1 grote ui
+- 2 tenen knoflook
+- 1 liter groentebouillon
+- 2 el olijfolie
+- peper en zout naar smaak</textarea>
+    </p>
+        <p class="">
+        <label for="rm_recipe_options[bWijze]">Bereiding        </label>
+        <br/><span class="inputTip">Voer de stappen regel voor regel in.</span>        <textarea  placeholder="Schil de appels&#10;Verwarm de oven voor op 180 graden." style="width:100%;min-height:6em;" id="Bereiding" name="rm_recipe_options[bWijze]">Snipper de ui en de knoflook en fruit ze zachtjes in de olijfolie.
+
+Voeg de in blokjes gesneden winterpenen toe en bak kort mee.
+
+Schep de linzen erdoor, giet de bouillon erbij en laat 25 minuten koken.
+
+Breng op smaak met peper en zout.</textarea>
+    </p>
+        <p class="">
+        <label for="rm_recipe_options[opmerkingen]">Opmerkingen        </label>
+                <textarea maxlength="1000" placeholder="" style="width:100%;min-height:6em;" id="Opmerkingen" name="rm_recipe_options[opmerkingen]"></textarea>
+    </p>
+               <input type="hidden" class="textInput" id="bron" name="rm_recipe_options[bron]" value="www.example.com" />
+        <p class="">
+        <label for="rm_recipe_options[bron]">Bron</label>
+        <input type="input" class="textInput" id="bron" name="rm_recipe_options[bron]" value="www.example.com" />
+    </p>
+                                        <p>
+                                                                                <label for="tags"><i class="fa fa-tag" aria-hidden="true"></i>Tags</label> <a href="#TB_inline?width=200&height=300&inlineId=tagsPopup" class="thickbox">taglijst</a>
+                                        <input type="text" name="newTag" class="newTag" placeholder="nieuwe tag"/><button class="addNewTag">toevoegen</button><input type="hidden" class="tags" name="rm_recipe_options[tags]" value=""/>
+                                    <div class="allTags"></div>
+
+                                    <div id="tagsPopup" style="display:none;">
+                                        <h2>Tags/labels.</h2>
+                                        <span>klik en voeg toe! Vergeet je recept niet op te slaan!</span>
+                                        <p> <a class="addTag">snel</a> |<a class="addTag">feest</a> |<a class="addTag">vegetarisch</a> |<a class="addTag">zomer</a> |                                        </p>
+                                    </div>
+                                    <p>Voer tags bij voorkeur in gescheiden door een komma. Dus bijv. "vegetarisch, uitproberen, winters".</p>
+
+    
+    <p class="">
+        <label for="rm_recipe_options[aantalPersonen]">Aantal Personen</label>
+        <input type="number"  step="any" class="textInput " id="aantalPersonen" name="rm_recipe_options[aantalPersonen]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[aantalStuks]">Aantal Stuks</label>
+        <input type="number"  step="any" class="textInput " id="aantalStuks" name="rm_recipe_options[aantalStuks]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[vbTijd]">Voorbereiding (min.)</label>
+        <input type="number"  step="any" class="textInput " id="vbTijd" name="rm_recipe_options[vbTijd]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[bTijd]">Bereiding (min.)</label>
+        <input type="number"  step="any" class="textInput " id="bTijd" name="rm_recipe_options[bTijd]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[ovenTijd]">ovenTijd (min.)</label>
+        <input type="number"  step="any" class="textInput " id="ovenTijd" name="rm_recipe_options[ovenTijd]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[ovenTemperatuur]">Oven temperatuur (graden)</label>
+        <input type="number"  step="any" class="textInput " id="ovenTemperatuur" name="rm_recipe_options[ovenTemperatuur]" value="" />
+    </p>
+    <hr><h3>weekmenu </h3>
+    <p class="">
+        <label for="rm_recipe_options[energy]">Energie (kcal)</label>
+        <input type="number"  step="any" class="textInput " id="energy" name="rm_recipe_options[energy]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[protein]">Eiwit (g)</label>
+        <input type="number"  step="any" class="textInput " id="protein" name="rm_recipe_options[protein]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[carbohydrate]">Koolhydraten (g)</label>
+        <input type="number"  step="any" class="textInput " id="carbohydrate" name="rm_recipe_options[carbohydrate]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[sugars]">Waarvan suikers (g)</label>
+        <input type="number"  step="any" class="textInput " id="sugars" name="rm_recipe_options[sugars]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[fat]">Vet (g)</label>
+        <input type="number"  step="any" class="textInput " id="fat" name="rm_recipe_options[fat]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[saturatedFat]">Waarvan verzadigd (g)</label>
+        <input type="number"  step="any" class="textInput " id="saturatedFat" name="rm_recipe_options[saturatedFat]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[natrium]">Natrium (g)</label>
+        <input type="number"  step="any" class="textInput " id="natrium" name="rm_recipe_options[natrium]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[salt]">Zout (g)</label>
+        <input type="number"  step="any" class="textInput " id="salt" name="rm_recipe_options[salt]" value="" />
+    </p>
+    
+    <p class="">
+        <label for="rm_recipe_options[dietaryFiber]">Vezels (g)</label>
+        <input type="number"  step="any" class="textInput " id="dietaryFiber" name="rm_recipe_options[dietaryFiber]" value="" />
+    </p>
+               <input type="hidden" class="textInput" id="openbaar" name="rm_recipe_options[openbaar]" value="" />
+                   <input type="hidden" class="textInput" id="www" name="rm_recipe_options[www]" value="" />
+    
+
+                                    <p class="save-settings">
+                                        <input type="submit" id="saveRecipe" class="button-primary" value="Recept opslaan">
+                                        <input type="submit" name="saveRecipeAndNew" id="saveRecipeAndNew" class="button-primary" value="Opslaan & nieuw">
+
+                                        <span class="imageProcessing" style="display:none;"><img width="16px" src="/wp-admin/images/wpspin_light-2x.gif"/></span>
+                                    </p>
+
+
+                                </div><!-- .inside -->
+
+                            </div><!-- .postbox -->
+
+
+
+
+                    </div><!-- .meta-box-sortables .ui-sortable -->
+
+                </div><!-- post-body-content -->
+
+                <!-- sidebar -->
+                <div id="postbox-container-1" class="postbox-container">
+
+                    <div class="meta-box-sortables">
+
+                        <div id="plugin-settings-sidebar" class="postbox">
+
+                            <div class="handlediv" title="Click to toggle"><br></div>
+                            <!-- Toggle -->
+
+                            <h2 class="hndle">Categorie</h2>
+
+                            <div class="inside">
+
+                                <p>Kies 1 of meer categorieen.</p>
+                                <div id="" class="categorydiv">
+
+                                    <div id="-all" class="tabs-panel">
+                                        <ul id="categoryList" data-wp-lists="list:cp_recipe_category" class="categorychecklist form-no-clear">
+                                            <li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Algemeen"/>Algemeen</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Amuse"/>Amuse</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Bijgerecht"/>Bijgerecht</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Brunch"/>Brunch</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Hoofdgerecht" checked/>Hoofdgerecht</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Lunch"/>Lunch</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Nagerecht"/>Nagerecht</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Ontbijt"/>Ontbijt</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Ovenschotel"/>Ovenschotel</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Patisserie"/>Patisserie</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Salade"/>Salade</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Saus & Dressings"/>Saus & Dressings</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Snacks & Drinks"/>Snacks & Drinks</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Soep"/>Soep</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Tussengerecht"/>Tussengerecht</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Vegetarisch"/>Vegetarisch</li><li><input type="checkbox" name="rm_recipe_options[soortGerecht][]" value="Voorgerecht"/>Voorgerecht</li>                                        </ul>
+
+                                    </div>
+
+                                </div>
+
+    <input type="hidden" id="plugin_settings_nonce" name="plugin_settings_nonce" value="testnonce123" /><input type="hidden" name="_wp_http_referer" value="/wp-admin/admin.php?page=rm_recipe&#038;action=editRecipe&#038;recipeId=4166830" />
+
+                            </div><!-- .inside -->
+
+                        </div><!-- #plugin-settings-sidebar .postbox -->
+                        <div id="cookBookDiv" class="postbox">
+                            <h2 class="hndle"><span>Kookboek</span></h2>
+                        <div class="inside">
+
+                            <p>Plaats in 1 of meer kookboeken.</p>
+                            <div id="" class="cookbookDiv">
+
+                                <div id="-all2" class="tabs-panel">
+                                    <ul id="cookbookList" data-wp-lists="list:cp_recipe_cookbooks" class="cookbookchecklist form-no-clear">
+                                        <li><input type="checkbox" name="rm_recipe_options[cookbook][]" value="69061"/>weekmenu </li><li><input type="checkbox" name="rm_recipe_options[cookbook][]" value="72180"/>bakken </li><li><input type="checkbox" name="rm_recipe_options[cookbook][]" value="72181"/>basis </li><li><input type="checkbox" name="rm_recipe_options[cookbook][]" value="71281"/>groenten </li>                                    </ul>
+                                </div>
+
+                            </div>
+
+                            <input type="hidden" id="plugin_settings_nonce" name="plugin_settings_nonce" value="testnonce123" /><input type="hidden" name="_wp_http_referer" value="/wp-admin/admin.php?page=rm_recipe&#038;action=editRecipe&#038;recipeId=4166830" />
+
+                        </div><!-- .inside -->
+                        </div><!-- .inside -->
+
+                        <div id="photoDiv" class="postbox">
+                            <h2 class="hndle"><span>Foto</span></h2>
+                            <div class="inside">
+                                <div id="" class="photodiv"><div class="imageContainer headImage"><img data-storage-id="f33bef4a0a0194" class="recipeImage" src="https://s3.nl-ams.scw.cloud/nl.mobielbekeken.receptenmaker/recepten/images/f33bef4a0a0194/400x300/image.jpg"/><a class="headImageIcon"><span class="fa fa-star fa-lg"></span></a><input type="checkbox" class="imageCheckbox" name="anvmssew3mtdfr" value="anvmssew3mtdfr"></div>                                    <div>
+                                        <input type="hidden" name="headImage" id="head_image_url" class="regular-text" value=""/>
+                                        <div class="imagesToSave">
+                                        </div>
+
+                                        <img alt="geen afbeelding" id="image1" src="" width="60" class="image1" style="display:none">
+                                        <span class="imageSaved"></span>
+                                    </div>
+
+                                </div>
+                                <br>
+
+                                <input type="button" name="upload-btn" id="upload-btn" class="button-secondary" value="Foto toevoegen"><br><br>
+                                <input type="button" name="deleteImg-btn" id="deleteImg-btn" class="button-secondary" value="Foto verwijderen">
+                            </div>
+                        </div>
+                        </form>
+</div>
