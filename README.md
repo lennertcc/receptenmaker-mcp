@@ -54,10 +54,24 @@ one-time steps in the Cloudflare dashboard:
    `receptenmaker-mcp-oauth`. Copy its id into `kv_namespaces[0].id` in `wrangler.jsonc`,
    replacing `REPLACE_WITH_KV_NAMESPACE_ID`, and commit. This namespace holds OAuth clients,
    grants and tokens.
-3. **Set the signing secret.** Either
-   `npx wrangler secret put COOKIE_ENCRYPTION_KEY` locally, or add it as an encrypted
-   variable on the Worker. Any long random string works:
-   `openssl rand -base64 32`.
+3. **Set the signing secret,** after the first deploy has created the Worker:
+
+   ```sh
+   npx wrangler login     # once, if this machine has no Cloudflare credentials
+   openssl rand -base64 32 | npx wrangler secret put COOKIE_ENCRYPTION_KEY
+   ```
+
+   Piping it keeps the value off your screen and out of your shell history. The dashboard
+   equivalent is the Worker's Settings → Variables and Secrets → Add.
+
+   Add it as an encrypted **Secret**, not a plain-text Variable: a deploy can clear
+   dashboard-set variables that are absent from `wrangler.jsonc`, while secrets survive.
+   Until it is set, `/authorize` answers 503 with a page saying so; everything else works.
+
+   The key signs the authorization request while it round-trips through the login form, so
+   a tampered `redirect_uri` cannot come back from the browser. Rotating it is safe: it
+   invalidates only sign-ins that are mid-flight, never connections that already exist,
+   because stored credentials are encrypted with token-derived keys instead.
 
 The Durable Object that keeps each MCP session is created automatically by the migration in
 `wrangler.jsonc` on the first deploy.
@@ -95,6 +109,10 @@ RM_USER=... RM_PASS=... RM_LIVE_WRITE=1 npm test   # also creates and deletes a 
 ```
 
 ## Notes
+
+- The KV namespace id committed in `wrangler.jsonc` is a resource identifier, not a
+  credential: it grants nothing without Cloudflare API credentials for the account, and
+  Workers Builds needs it at build time. The same goes for the Durable Object binding.
 
 - Recipe content is generally Dutch. Ingredients and instructions are line-separated text,
   and an ingredient line starting with `--` is a heading within the list.

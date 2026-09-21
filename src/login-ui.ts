@@ -167,12 +167,21 @@ function homePage(): Response {
 </div>`);
 }
 
-async function secret(env: Env): Promise<string> {
-  const value = env.COOKIE_ENCRYPTION_KEY;
-  if (!value) {
-    throw new Error("COOKIE_ENCRYPTION_KEY is not set; run `wrangler secret put COOKIE_ENCRYPTION_KEY`");
-  }
-  return value;
+/** Shown instead of a 500 when the Worker is deployed but not finished being set up. */
+function setupIncompletePage(): Response {
+  return page(
+    `<div class="card">
+  <h1>Setup incomplete</h1>
+  <p>This server is deployed but cannot sign anyone in yet: its
+  <code>COOKIE_ENCRYPTION_KEY</code> secret is missing.</p>
+  <p class="note">Set it as an encrypted <strong>Secret</strong> (not a plain variable, which a
+  deploy can clear) and try again:</p>
+  <p class="note"><code>openssl rand -base64 32 | npx wrangler secret put COOKIE_ENCRYPTION_KEY</code></p>
+  <p class="note">Or add it under the Worker's Settings → Variables and Secrets in the
+  Cloudflare dashboard.</p>
+</div>`,
+    503,
+  );
 }
 
 /** Everything that is not an OAuth token endpoint or the MCP API. */
@@ -180,11 +189,14 @@ export const loginHandler: ExportedHandler<Env> = {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
 
+    const signingKey = env.COOKIE_ENCRYPTION_KEY;
+    if (!signingKey && url.pathname === "/authorize") return setupIncompletePage();
+
     if (url.pathname === "/authorize" && request.method === "GET") {
       const authRequest = await env.OAUTH_PROVIDER.parseAuthRequest(request);
       const client = await env.OAUTH_PROVIDER.lookupClient(authRequest.clientId);
       return loginPage(
-        await sealRequest(authRequest, await secret(env)),
+        await sealRequest(authRequest, signingKey!),
         client?.clientName ?? "An MCP client",
         "",
       );
@@ -196,7 +208,7 @@ export const loginHandler: ExportedHandler<Env> = {
       const username = String(form.get("username") ?? "").trim();
       const password = String(form.get("password") ?? "");
 
-      const authRequest = await openRequest(sealed, await secret(env));
+      const authRequest = await openRequest(sealed, signingKey!);
       if (!authRequest) {
         return page(
           `<div class="card"><h1>Sign-in expired</h1><p>Start the connection again from your MCP client.</p></div>`,
