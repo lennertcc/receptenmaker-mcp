@@ -104,6 +104,12 @@ registration and token storage in KV. The Worker's own `/authorize` page collect
 Receptenmaker credentials and validates them with a real `wp-login.php` POST before any
 grant is issued, so an invalid password never produces a token.
 
+The authorization request is held in KV under a single-use random id while the user is at
+the login form, rather than signed and round-tripped through the browser. The browser cannot
+tamper with a request it never carries, so this needs no signing secret — and therefore the
+Worker needs no configuration at all beyond its bindings, which matters because setting a
+secret is the one deployment step that cannot be done from the Cloudflare dashboard alone.
+
 Credentials are stored in the grant's `props`, which the provider encrypts at rest; the
 key is derived from the access token, so props are unreadable without a token the client
 holds. This is what lets the Worker silently re-login when the WordPress session expires
@@ -181,9 +187,13 @@ repository and deploys on push to `main`, so no Cloudflare credential is needed 
 the dashboard.
 
 One-time manual setup, documented in the README: connect the repo in the Cloudflare
-dashboard, create the `OAUTH_KV` namespace and put its id in `wrangler.jsonc`, and set the
-`COOKIE_ENCRYPTION_KEY` secret. The Durable Object is created automatically by the
-migration on first deploy.
+dashboard, then create the `OAUTH_KV` namespace and put its id in `wrangler.jsonc`. There
+are no secrets to set. The Durable Object is created automatically by the migration on first
+deploy.
+
+`.npmrc` pins `legacy-peer-deps=true`: `agents` declares peer dependencies it does not use
+in this server, including React, and npm cannot resolve them strictly — a clean `npm ci`
+fails without it, which is exactly how the first Workers build failed.
 
 ## Security notes
 
@@ -191,5 +201,7 @@ migration on first deploy.
 - Storing a user's Receptenmaker password (encrypted, token-derived key) is a deliberate
   tradeoff accepted in exchange for not re-authorizing every two days. Dropping it means
   falling back to cookie-only sessions.
+- There is no server-held signing key to leak or rotate, because a sign-in in progress is
+  server-side state in KV rather than a signed token in the browser.
 - `delete_recipe` is irreversible upstream, so its description states that plainly for the
   benefit of the calling model.

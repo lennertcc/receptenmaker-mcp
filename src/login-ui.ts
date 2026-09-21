@@ -1,60 +1,39 @@
 import type { AuthRequest } from "@cloudflare/workers-oauth-provider";
 import { AuthError, ReceptenmakerClient } from "./rm/client";
 
-const encoder = new TextEncoder();
-
-function base64url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes))
-    .replace(/\+/g, "-")
-    .replace(/\//g, "_")
-    .replace(/=+$/, "");
-}
-
-function fromBase64url(value: string): Uint8Array {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-  return Uint8Array.from(raw, (c) => c.charCodeAt(0));
-}
-
-async function hmacKey(secret: string): Promise<CryptoKey> {
-  return crypto.subtle.importKey(
-    "raw",
-    encoder.encode(secret),
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign", "verify"],
-  );
-}
-
 /**
- * The authorization request has to survive the round trip through the login form. It is
- * signed so a tampered redirect_uri or client_id cannot come back from the browser.
+ * How long a started sign-in stays valid. The authorization request is held server-side in
+ * KV and the browser only carries an unguessable id, so nothing about the request (least of
+ * all redirect_uri) can be tampered with on the way through the login form. That needs no
+ * signing secret, which in turn means this Worker needs no configuration beyond its
+ * bindings.
  */
-async function sealRequest(request: AuthRequest, secret: string): Promise<string> {
-  const payload = base64url(encoder.encode(JSON.stringify(request)));
-  const signature = await crypto.subtle.sign(
-    "HMAC",
-    await hmacKey(secret),
-    encoder.encode(payload),
-  );
-  return `${payload}.${base64url(new Uint8Array(signature))}`;
+const LOGIN_TTL_SECONDS = 900;
+
+const loginKey = (id: string) => `login-request:${id}`;
+
+async function startLogin(env: Env, request: AuthRequest): Promise<string> {
+  const id = crypto.randomUUID();
+  await env.OAUTH_KV.put(loginKey(id), JSON.stringify(request), {
+    expirationTtl: LOGIN_TTL_SECONDS,
+  });
+  return id;
 }
 
-async function openRequest(sealed: string, secret: string): Promise<AuthRequest | null> {
-  const [payload, signature] = sealed.split(".");
-  if (!payload || !signature) return null;
-  const valid = await crypto.subtle.verify(
-    "HMAC",
-    await hmacKey(secret),
-    fromBase64url(signature),
-    encoder.encode(payload),
-  );
-  if (!valid) return null;
+async function resumeLogin(env: Env, id: string): Promise<AuthRequest | null> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  const stored = await env.OAUTH_KV.get(loginKey(id));
+  if (!stored) return null;
   try {
-    return JSON.parse(new TextDecoder().decode(fromBase64url(payload))) as AuthRequest;
+    return JSON.parse(stored) as AuthRequest;
   } catch {
     return null;
   }
+}
+
+/** Sign-ins are single use: finishing one retires its id so it cannot be replayed. */
+async function finishLogin(env: Env, id: string): Promise<void> {
+  await env.OAUTH_KV.delete(loginKey(id));
 }
 
 const escape = (value: string): string =>
@@ -132,7 +111,7 @@ function page(body: string, status = 200): Response {
 }
 
 function loginPage(
-  sealed: string,
+  loginId: string,
   clientName: string,
   username: string,
   error?: string,
@@ -143,7 +122,7 @@ function loginPage(
   <p class="client"><strong>${escape(clientName)}</strong> is asking to read and change the recipes in your Receptenmaker account.</p>
   ${error ? `<p class="error">${escape(error)}</p>` : ""}
   <form method="post" action="/authorize">
-    <input type="hidden" name="oauth_request" value="${escape(sealed)}">
+    <input type="hidden" name="login_id" value="${escape(loginId)}">
     <label for="username">Receptenmaker e-mail or username</label>
     <input id="username" name="username" type="text" autocomplete="username" required autofocus value="${escape(username)}">
     <label for="password">Password</label>
@@ -167,36 +146,16 @@ function homePage(): Response {
 </div>`);
 }
 
-/** Shown instead of a 500 when the Worker is deployed but not finished being set up. */
-function setupIncompletePage(): Response {
-  return page(
-    `<div class="card">
-  <h1>Setup incomplete</h1>
-  <p>This server is deployed but cannot sign anyone in yet: its
-  <code>COOKIE_ENCRYPTION_KEY</code> secret is missing.</p>
-  <p class="note">Set it as an encrypted <strong>Secret</strong> (not a plain variable, which a
-  deploy can clear) and try again:</p>
-  <p class="note"><code>openssl rand -base64 32 | npx wrangler secret put COOKIE_ENCRYPTION_KEY</code></p>
-  <p class="note">Or add it under the Worker's Settings → Variables and Secrets in the
-  Cloudflare dashboard.</p>
-</div>`,
-    503,
-  );
-}
-
 /** Everything that is not an OAuth token endpoint or the MCP API. */
 export const loginHandler: ExportedHandler<Env> = {
   async fetch(request, env): Promise<Response> {
     const url = new URL(request.url);
 
-    const signingKey = env.COOKIE_ENCRYPTION_KEY;
-    if (!signingKey && url.pathname === "/authorize") return setupIncompletePage();
-
     if (url.pathname === "/authorize" && request.method === "GET") {
       const authRequest = await env.OAUTH_PROVIDER.parseAuthRequest(request);
       const client = await env.OAUTH_PROVIDER.lookupClient(authRequest.clientId);
       return loginPage(
-        await sealRequest(authRequest, signingKey!),
+        await startLogin(env, authRequest),
         client?.clientName ?? "An MCP client",
         "",
       );
@@ -204,11 +163,11 @@ export const loginHandler: ExportedHandler<Env> = {
 
     if (url.pathname === "/authorize" && request.method === "POST") {
       const form = await request.formData();
-      const sealed = String(form.get("oauth_request") ?? "");
+      const loginId = String(form.get("login_id") ?? "");
       const username = String(form.get("username") ?? "").trim();
       const password = String(form.get("password") ?? "");
 
-      const authRequest = await openRequest(sealed, signingKey!);
+      const authRequest = await resumeLogin(env, loginId);
       if (!authRequest) {
         return page(
           `<div class="card"><h1>Sign-in expired</h1><p>Start the connection again from your MCP client.</p></div>`,
@@ -220,7 +179,7 @@ export const loginHandler: ExportedHandler<Env> = {
       const clientName = client?.clientName ?? "An MCP client";
 
       if (!username || !password) {
-        return loginPage(sealed, clientName, username, "Fill in both fields.");
+        return loginPage(loginId, clientName, username, "Fill in both fields.");
       }
 
       try {
@@ -233,9 +192,11 @@ export const loginHandler: ExportedHandler<Env> = {
           error instanceof AuthError
             ? error.message
             : "Could not reach Receptenmaker. Try again in a moment.";
-        return loginPage(sealed, clientName, username, message);
+        // The stored request is left in place so the form can be submitted again.
+        return loginPage(loginId, clientName, username, message);
       }
 
+      await finishLogin(env, loginId);
       const { redirectTo } = await env.OAUTH_PROVIDER.completeAuthorization({
         request: authRequest,
         userId: username,

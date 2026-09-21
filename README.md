@@ -45,8 +45,8 @@ prompting the user again. Revoking the connection in your MCP client discards th
 
 ## Deploying
 
-Cloudflare Workers Builds watches this repository and deploys on every push to `main`. Three
-one-time steps in the Cloudflare dashboard:
+Cloudflare Workers Builds watches this repository and deploys on every push to `main`. Two
+one-time steps in the Cloudflare dashboard, and no secrets to manage:
 
 1. **Connect the repository.** Workers & Pages → Create → Workers → *Import a repository*,
    pick this repo. Build command `npm run deploy`, no build output directory.
@@ -54,24 +54,6 @@ one-time steps in the Cloudflare dashboard:
    `receptenmaker-mcp-oauth`. Copy its id into `kv_namespaces[0].id` in `wrangler.jsonc`,
    replacing `REPLACE_WITH_KV_NAMESPACE_ID`, and commit. This namespace holds OAuth clients,
    grants and tokens.
-3. **Set the signing secret,** after the first deploy has created the Worker:
-
-   ```sh
-   npx wrangler login     # once, if this machine has no Cloudflare credentials
-   openssl rand -base64 32 | npx wrangler secret put COOKIE_ENCRYPTION_KEY
-   ```
-
-   Piping it keeps the value off your screen and out of your shell history. The dashboard
-   equivalent is the Worker's Settings → Variables and Secrets → Add.
-
-   Add it as an encrypted **Secret**, not a plain-text Variable: a deploy can clear
-   dashboard-set variables that are absent from `wrangler.jsonc`, while secrets survive.
-   Until it is set, `/authorize` answers 503 with a page saying so; everything else works.
-
-   The key signs the authorization request while it round-trips through the login form, so
-   a tampered `redirect_uri` cannot come back from the browser. Rotating it is safe: it
-   invalidates only sign-ins that are mid-flight, never connections that already exist,
-   because stored credentials are encrypted with token-derived keys instead.
 
 The Durable Object that keeps each MCP session is created automatically by the migration in
 `wrangler.jsonc` on the first deploy.
@@ -83,7 +65,6 @@ itself, you sign in with your Receptenmaker e-mail and password, and that's it.
 
 ```sh
 npm install
-echo "COOKIE_ENCRYPTION_KEY=$(openssl rand -base64 32)" > .dev.vars
 npm run dev
 ```
 
@@ -113,6 +94,12 @@ RM_USER=... RM_PASS=... RM_LIVE_WRITE=1 npm test   # also creates and deletes a 
 - The KV namespace id committed in `wrangler.jsonc` is a resource identifier, not a
   credential: it grants nothing without Cloudflare API credentials for the account, and
   Workers Builds needs it at build time. The same goes for the Durable Object binding.
+- `.npmrc` pins `legacy-peer-deps=true`. The `agents` package declares peers it does not
+  use here (React among them) that npm cannot resolve strictly — without this, a clean
+  `npm ci` fails and so does the Workers build.
+- A sign-in in progress is held in KV under a single-use random id for 15 minutes, so the
+  browser never carries the authorization request itself and there is no signing secret to
+  configure or rotate.
 
 - Recipe content is generally Dutch. Ingredients and instructions are line-separated text,
   and an ingredient line starting with `--` is a heading within the list.
