@@ -8,8 +8,7 @@
     "bindings": [{ "name": "MCP_OBJECT", "class_name": "ReceptenmakerMCP" }]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ReceptenmakerMCP"] }],
-  // Create with: npx wrangler kv namespace create OAUTH_KV
-  // or in the dashboard under Storage & Databases > KV, then paste the id here.
+  // Holds OAuth clients, grants and tokens. Point a fork at its own namespace.
   "kv_namespaces": [{ "binding": "OAUTH_KV", "id": "f5ff9dec77eb4138beb08f2939923987" }],
   // `agents` lazily imports the optional `ai` package in a code path this server never
   // reaches; see src/shims/ai.ts.
