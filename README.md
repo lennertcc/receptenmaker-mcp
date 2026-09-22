@@ -125,9 +125,14 @@ that.
 
 ## Limitations
 
-- **Cookbooks cannot be created or renamed**, and the shopping list and meal calendar are
-  absent. Receptenmaker offers these only in its mobile app, and the website has no
-  interface for them to drive. Recipes can still be assigned to cookbooks that exist.
+- **Cookbooks cannot be created, renamed or deleted.** The website offers no interface for
+  it, so there is nothing here to drive. Recipes can still be assigned to cookbooks that
+  already exist. The mobile app's private API does support it —
+  [`docs/app-api.md`](docs/app-api.md) documents that surface.
+- **There is no shopping list or meal calendar to expose,** and this is not a gap in this
+  server: neither exists on Receptenmaker's servers. The app collects ingredients and hands
+  them to a share sheet, and "put in agenda" opens the phone's own calendar app. An
+  assistant can build a shopping list from `get_recipe` output directly.
 - **Categories are a fixed list of 17**; Receptenmaker rejects anything else. Ask
   `list_categories`.
 - **Filtering by category costs several requests.** Receptenmaker has no category filter, so

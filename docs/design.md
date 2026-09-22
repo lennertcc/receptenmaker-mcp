@@ -85,9 +85,13 @@ the site posts `savePhoto` and then `setPhotoAsHead` to `/php/photoFunctions.php
 ### Not in scope
 
 Creating and editing cookbooks has no web surface — the page states they are managed in
-the mobile app. The shopping list and meal calendar are likewise app-only. Recipes can
-still be assigned to existing cookbooks. Reverse-engineering the Android APK to reach
-those features is out of scope.
+the mobile app. Recipes can still be assigned to existing cookbooks.
+
+The APK has since been examined ([`app-api.md`](app-api.md)), which corrected an assumption
+recorded here: the shopping list and meal calendar are not app-only server features but
+device integrations — a share sheet and the phone's calendar app respectively. There is no
+server state behind either, so no API could expose them. Cookbook management, by contrast,
+is a real API in the app and could be added if the website's limitation becomes annoying.
 
 ## Architecture
 
