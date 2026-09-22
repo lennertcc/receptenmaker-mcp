@@ -2,6 +2,7 @@ import OAuthProvider from "@cloudflare/workers-oauth-provider";
 import { McpAgent } from "agents/mcp";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { ReceptenmakerClient } from "./rm/client";
+import { ReceptenmakerAppClient } from "./rm/app-client";
 import { registerTools } from "./tools";
 import { loginHandler } from "./login-ui";
 
@@ -16,10 +17,10 @@ const INSTRUCTIONS = `Read and manage the recipes and cookbooks of one Receptenm
 Recipe text is usually Dutch. Ingredients and instructions are line-separated free text, and
 an ingredient line beginning with "--" is a heading within the list.
 
-Categories come from a fixed list (list_categories); no other value is accepted. Cookbooks can
-only be created or renamed in the Receptenmaker mobile app, but list_cookbooks and
-set_recipe_cookbooks work here. Shopping lists and the meal calendar are app-only and are not
-exposed by this server.
+Categories come from a fixed list (list_categories); no other value is accepted.
+
+Receptenmaker has no shopping list or meal calendar on its servers, so neither can be read or
+written here; build a shopping list from get_recipe output instead.
 
 To save a recipe that already exists on the web, prefer import_recipe_from_url over
 create_recipe: Receptenmaker's own importer extracts the fields and the photo.`;
@@ -31,18 +32,20 @@ export class ReceptenmakerMCP extends McpAgent<Env, null, Props> {
   );
 
   private client?: ReceptenmakerClient;
+  private appClient?: ReceptenmakerAppClient;
+
+  private credentials(): Props {
+    const props = this.props as Props | undefined;
+    if (!props?.username || !props.password) {
+      throw new Error("no Receptenmaker credentials in this session; re-authorize the connection");
+    }
+    return props;
+  }
 
   async init(): Promise<void> {
-    registerTools(this.server, () => {
-      const props = this.props as Props | undefined;
-      if (!props?.username || !props.password) {
-        throw new Error("no Receptenmaker credentials in this session; re-authorize the connection");
-      }
-      this.client ??= new ReceptenmakerClient({
-        username: props.username,
-        password: props.password,
-      });
-      return this.client;
+    registerTools(this.server, {
+      web: () => (this.client ??= new ReceptenmakerClient(this.credentials())),
+      app: () => (this.appClient ??= new ReceptenmakerAppClient(this.credentials())),
     });
   }
 }

@@ -31,6 +31,9 @@ credentials. Each user's data stays their own.
 | `set_recipe_cookbooks` | Replace the cookbooks a recipe belongs to |
 | `share_recipe` | Share publicly, share by link, or stop sharing |
 | `import_recipe_from_url` | Hand a recipe page to Receptenmaker's own importer, photo included |
+| `create_cookbook` | Create an empty cookbook |
+| `rename_cookbook` | Rename a cookbook |
+| `delete_cookbook` | Delete a cookbook; the recipes in it survive |
 
 ## Connecting a client
 
@@ -74,7 +77,12 @@ Deploying from a machine with Wrangler works too: `npm install && npx wrangler d
 
 Receptenmaker's web app is a WordPress plugin that renders server-side HTML and exposes no
 JSON API, so the client here signs in through `wp-login.php`, reads the pages it needs and
-posts the same forms a browser would. The exact request shapes were established by capturing
+posts the same forms a browser would.
+
+Cookbook creation, renaming and deletion are the exception: the website has no interface for
+them at all, so those three tools go through the mobile app's private JSON API instead,
+documented in [`docs/app-api.md`](docs/app-api.md). Cookbook ids are shared between the two,
+so ids from `list_cookbooks` work with them. The exact request shapes were established by capturing
 real browser traffic rather than guessed from markup — several plausible-looking assumptions
 turned out to be wrong. [`docs/design.md`](docs/design.md) documents the whole surface.
 
@@ -125,10 +133,6 @@ that.
 
 ## Limitations
 
-- **Cookbooks cannot be created, renamed or deleted.** The website offers no interface for
-  it, so there is nothing here to drive. Recipes can still be assigned to cookbooks that
-  already exist. The mobile app's private API does support it —
-  [`docs/app-api.md`](docs/app-api.md) documents that surface.
 - **There is no shopping list or meal calendar to expose,** and this is not a gap in this
   server: neither exists on Receptenmaker's servers. The app collects ingredients and hands
   them to a share sheet, and "put in agenda" opens the phone's own calendar app. An

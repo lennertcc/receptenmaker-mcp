@@ -103,7 +103,7 @@ The naming is inverted from what you would expect: `title` holds the **owner's**
 | `addObject` | recipe fields | create |
 | `saveEdits` | `objectID`, `receptCode` | update |
 | `deleteObjectRequest`, `performDeleteObjectRequest` | `objectID` | delete, in two steps |
-| `retrieveObjects` | `objects` | bulk fetch; also `retrieveObjectsForFileCache` |
+| `retrieveObjects` | `objects` | bulk fetch; also `retrieveObjectsForFileCache`. The `objects` format was not worked out — a JSON array of ids returns an empty body |
 | `getRecipeFromPhoto` | `imgData` | **OCR** — a photo of a recipe becomes fields |
 | `parseContentsFromSite` | `site`, `contents`, `ignoreDuplicate` | import from a page |
 | `getRecipePDF` | `objectID`, `addImages` | |
@@ -130,9 +130,16 @@ that the current parsers guard against.
 
 Against that: it is an undocumented private API for a specific app build (`version: 28`), so
 it can change without notice and has no compatibility promise — whereas the website has at
-least been stable enough to render for years. The two also disagree on recipe ids, so a
-switch is a rewrite of the client rather than a swap, and any stored credential would change
-form.
+least been stable enough to render for years. A stored credential would also change form,
+from the password to its MD5.
+
+Recipe ids are shared between the two APIs, which makes a future migration cheaper than it
+first appeared. Two of the three cookbooks checked had membership lists identical to the
+website's recipe ids (6 of 6 and 2 of 2); the third differed by one entry, `3565147`, which
+the app reports as a member but the website's cookbook-filtered listing omits — a
+pre-existing discrepancy, not a difference in id space. `retrieveObjects` would settle it
+outright, but its parameter shape was not pinned down: the `objects` value tried here
+produced an empty response body.
 
 A reasonable middle path is to keep the website client and add the app API only for what the
 website cannot do at all: creating, renaming and deleting cookbooks.

@@ -9,6 +9,7 @@ import {
 } from "./rm/client";
 import { ParseError, type RecipeListItem } from "./rm/parse";
 import { CATEGORIES } from "./rm/fields";
+import type { ReceptenmakerAppClient } from "./rm/app-client";
 
 const SITE = "https://www.receptenmaker.com";
 
@@ -119,7 +120,17 @@ function withUrls<T extends { id: string }>(recipe: T) {
   };
 }
 
-export function registerTools(server: McpServer, getClient: () => ReceptenmakerClient): void {
+/**
+ * The two clients a tool can reach. Most work goes through the website; cookbook
+ * management exists only in the mobile app's API.
+ */
+export interface Clients {
+  web: () => ReceptenmakerClient;
+  app: () => ReceptenmakerAppClient;
+}
+
+export function registerTools(server: McpServer, clients: Clients): void {
+  const getClient = clients.web;
   server.registerTool(
     "search_recipes",
     {
@@ -181,7 +192,7 @@ export function registerTools(server: McpServer, getClient: () => ReceptenmakerC
     {
       title: "List cookbooks",
       description:
-        "The cookbooks in this account. Cookbooks can only be created or renamed in the Receptenmaker mobile app, but recipes can be added to them from here.",
+        "The cookbooks in this account, with the ids used by the other cookbook tools.",
       inputSchema: {},
       annotations: { readOnlyHint: true },
     },
@@ -276,6 +287,49 @@ export function registerTools(server: McpServer, getClient: () => ReceptenmakerC
     },
     async ({ id, mode }) =>
       guarded(async () => withUrls(await getClient().shareRecipe(id, mode))),
+  );
+
+  server.registerTool(
+    "create_cookbook",
+    {
+      title: "Create a cookbook",
+      description:
+        "Create a new, empty cookbook. Add recipes to it afterwards with set_recipe_cookbooks.",
+      inputSchema: { name: z.string().min(1).describe("Name shown on the cookbook.") },
+      annotations: { readOnlyHint: false },
+    },
+    async ({ name }) => guarded(() => clients.app().createCookbook(name)),
+  );
+
+  server.registerTool(
+    "rename_cookbook",
+    {
+      title: "Rename a cookbook",
+      description: "Change a cookbook's name. Ids come from list_cookbooks.",
+      inputSchema: { id: z.string(), name: z.string().min(1) },
+      annotations: { readOnlyHint: false },
+    },
+    async ({ id, name }) =>
+      guarded(async () => {
+        await clients.app().renameCookbook(id, name);
+        return { id, name };
+      }),
+  );
+
+  server.registerTool(
+    "delete_cookbook",
+    {
+      title: "Delete a cookbook",
+      description:
+        "Permanently delete a cookbook. The recipes in it are not deleted, they simply stop belonging to it. This cannot be undone — confirm with the user before calling it.",
+      inputSchema: { id: z.string() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+    },
+    async ({ id }) =>
+      guarded(async () => {
+        await clients.app().deleteCookbook(id);
+        return { deleted: id };
+      }),
   );
 
   server.registerTool(

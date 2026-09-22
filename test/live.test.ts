@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ReceptenmakerClient } from "../src/rm/client";
+import { ReceptenmakerAppClient } from "../src/rm/app-client";
 
 const username = process.env.RM_USER;
 const password = process.env.RM_PASS;
@@ -83,6 +84,58 @@ describe.skipIf(!credentialsPresent || process.env.RM_LIVE_WRITE !== "1")(
       }
 
       await expect(rm.getRecipe(created.id)).rejects.toThrow(/no recipe with id/);
+    }, 180_000);
+  },
+);
+
+describe.skipIf(!credentialsPresent)("live account (app API reads)", () => {
+  const app = () =>
+    new ReceptenmakerAppClient({ username: username!, password: password! });
+
+  it("signs in with the MD5 password and lists the account's cookbooks", async () => {
+    const books = await app().listCookbooks();
+    for (const book of books) {
+      expect(book.id).toMatch(/^\d+$/);
+      expect(book.name.length).toBeGreaterThan(0);
+    }
+  }, 60_000);
+
+  it("reports the same cookbooks as the website, with the same ids", async () => {
+    const [viaApp, viaWeb] = await Promise.all([
+      app().listCookbooks(),
+      new ReceptenmakerClient({ username: username!, password: password! }).listCookbooks(),
+    ]);
+    expect(viaApp.map((b) => b.id).sort()).toEqual(viaWeb.map((b) => b.id).sort());
+  }, 90_000);
+
+  it("rejects a wrong password", async () => {
+    const wrong = new ReceptenmakerAppClient({ username: username!, password: "not-it" });
+    await expect(wrong.listCookbooks()).rejects.toThrow();
+  }, 60_000);
+});
+
+describe.skipIf(!credentialsPresent || process.env.RM_LIVE_WRITE !== "1")(
+  "live account (app API writes)",
+  () => {
+    it("creates, renames and deletes a scratch cookbook", async () => {
+      const app = new ReceptenmakerAppClient({ username: username!, password: password! });
+      // The plus sign exercises the escaping the app applies to the request body.
+      const name = `ZZ VITEST + ${Date.now()}`;
+      const created = await app.createCookbook(name);
+      expect(created.id).toMatch(/^\d+$/);
+
+      try {
+        const listed = (await app.listCookbooks()).find((b) => b.id === created.id);
+        expect(listed?.name).toBe(name);
+
+        const renamed = `${name} renamed`;
+        await app.renameCookbook(created.id, renamed);
+        expect((await app.listCookbooks()).find((b) => b.id === created.id)?.name).toBe(renamed);
+      } finally {
+        await app.deleteCookbook(created.id);
+      }
+
+      expect((await app.listCookbooks()).some((b) => b.id === created.id)).toBe(false);
     }, 180_000);
   },
 );
