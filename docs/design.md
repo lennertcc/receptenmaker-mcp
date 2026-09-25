@@ -25,7 +25,7 @@ Auth: `POST /wp-login.php` with `log`, `pwd`, `rememberme=forever`. Success is a
 | Share | `POST …&share-recipe=true`, body `shareRecipeId` + one of `sharePrivate` / `sharePublic` / `removeShare` |
 | Cookbooks | `GET /wp-admin/admin.php?page=cookbooks` |
 | Import from URL | `POST /php/functions.php`, body `function=getContentsFromSiteAndSave&version=18&url=<url>` |
-| Photos | `POST /php/photoFunctions.php`, `function` in `savePhoto` / `setPhotoAsHead` / `deletePhoto` |
+| Photos | `POST /php/photoFunctions.php`, `function` in `savePhoto` (from a URL) / `setPhotoAsHead` / `deletePhoto`; byte uploads go through the app API ([`app-api.md`](app-api.md)) |
 
 The recipe list is a standard `WP_List_Table`: 20 rows per page, total in
 `span.displaying-num`, sortable on `receptNaam`, `soortGerecht`, `bTijd`, `tags`, `bron`,

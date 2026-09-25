@@ -139,3 +139,39 @@ describe.skipIf(!credentialsPresent || process.env.RM_LIVE_WRITE !== "1")(
     }, 180_000);
   },
 );
+
+describe.skipIf(!credentialsPresent || process.env.RM_LIVE_WRITE !== "1")(
+  "live account (photo writes)",
+  () => {
+    it("adds, promotes and deletes photos on a scratch recipe", async () => {
+      const { addPhoto, removePhoto, setHeaderPhoto } = await import("../src/rm/photos");
+      const web = new ReceptenmakerClient({ username: username!, password: password! });
+      const app = new ReceptenmakerAppClient({ username: username!, password: password! });
+      const deps = {
+        listPhotos: (id: string) => web.listPhotos(id),
+        saveFromUrl: (id: string, url: string) => web.savePhotoFromUrl(id, url),
+        upload: (id: string, data: string) => app.uploadPhoto(id, data),
+        setHeader: (id: string, s: string) => web.setHeaderPhoto(id, s),
+        remove: (id: string, s: string) => web.deletePhoto(id, s),
+      };
+      // A 1×1 PNG: small, and exercises the '+'-escaping of base64 through the app API.
+      const png =
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAIAAACQd1PeAAAADElEQVR4nGP4z8AAAAMBAQDJ/pLvAAAAAElFTkSuQmCC";
+
+      const { id } = await web.createRecipe({ name: `ZZ VITEST PHOTO ${Date.now()}` });
+      try {
+        const first = await addPhoto(deps, id, { imageBase64: png }, true);
+        const second = await addPhoto(deps, id, { imageBase64: png }, true);
+        expect((await web.listPhotos(id)).map((p) => p.storage_id)).toEqual([second, first]);
+
+        await setHeaderPhoto(deps, id, first);
+        expect((await web.listPhotos(id))[0].storage_id).toBe(first);
+
+        await removePhoto(deps, id, second);
+        expect((await web.listPhotos(id)).map((p) => p.storage_id)).toEqual([first]);
+      } finally {
+        await web.deleteRecipe(id);
+      }
+    }, 240_000);
+  },
+);

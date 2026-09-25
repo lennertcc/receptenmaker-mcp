@@ -110,7 +110,9 @@ The naming is inverted from what you would expect: `title` holds the **owner's**
 | `setRecipesMatching` | `recipeId`, `selectedRecepten` | the "bijpassende recepten" links |
 | `didSetChangeAantalPersonenTo` | | serving-size rescale |
 | `setShareValue`, `viewedRecept`, `startedKookstand` | | sharing and telemetry |
-| `savePhoto`, `savePhotoAfterSet`, `setPhotoAsHead`, `setPhotoForSave`, `deletePhoto` | | photos |
+| `savePhoto` | `objectID`, `imgData` | ✅ upload; `imgData` is base64 of the file. Returns `storageID`. JPEG and PNG verified. For bytes that are not an image it answers `failed` **but still stores a broken photo entry** |
+| `savePhotoAfterSet`, `setPhotoForSave` | `objectID`, `storageID`, `imgData` | replace an existing photo's bytes; not used |
+| `setPhotoAsHead`, `deletePhoto` | `objectID`, `storageID` | also available on the website's `/php/photoFunctions.php`, which is what the server uses. `deletePhoto` answers `ok` even for a storage id the recipe does not have |
 
 ### Account and content
 

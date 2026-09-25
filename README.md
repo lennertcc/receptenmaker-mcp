@@ -21,7 +21,7 @@ credentials. Each user's data stays their own.
 | Tool | What it does |
 | --- | --- |
 | `search_recipes` | Search or browse recipes; text matches names and ingredients |
-| `get_recipe` | One recipe in full, including times, nutrition and cookbooks |
+| `get_recipe` | One recipe in full, including times, nutrition, cookbooks and photos |
 | `list_cookbooks` | The cookbooks in the account |
 | `list_categories` | The 17 dish categories Receptenmaker accepts |
 | `list_tags` | Tags defined on the account |
@@ -31,6 +31,9 @@ credentials. Each user's data stays their own.
 | `set_recipe_cookbooks` | Replace the cookbooks a recipe belongs to |
 | `share_recipe` | Share publicly, share by link, or stop sharing |
 | `import_recipe_from_url` | Hand a recipe page to Receptenmaker's own importer, photo included |
+| `add_recipe_photo` | Add a photo from a URL or from JPEG/PNG bytes; by default it becomes the header |
+| `set_recipe_header_photo` | Choose which of a recipe's photos is the header |
+| `delete_recipe_photo` | Remove a photo from a recipe |
 | `create_cookbook` | Create an empty cookbook |
 | `rename_cookbook` | Rename a cookbook |
 | `delete_cookbook` | Delete a cookbook; the recipes in it survive |
@@ -92,6 +95,13 @@ looked for, so a changed template can never be mistaken for an empty recipe coll
 
 `update_recipe` reads the recipe, merges your changes and posts the complete field set, so a
 partial update cannot silently blank the fields it did not mention.
+
+A recipe has a list of photos, and the first is the header photo shown in lists. Photos added
+by URL are downloaded by Receptenmaker itself; photos sent as bytes go through the mobile
+app's upload call. Uploaded bytes are checked to be a JPEG or PNG before anything is sent,
+because Receptenmaker stores a broken photo for anything else while reporting failure, and
+any photo a failed upload leaves behind is removed. Deleting a photo is confirmed against
+the recipe afterwards, since Receptenmaker reports success even for photos that do not exist.
 
 ## Credentials
 

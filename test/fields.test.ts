@@ -11,7 +11,10 @@ describe("recipeFromForm", () => {
     expect(recipe.name).toBe("Groentesoep met linzen");
     expect(recipe.categories).toEqual(["Hoofdgerecht"]);
     expect(recipe.ingredients).toContain("400 g linzen");
-    expect(recipe.image_url).toContain("f33bef4a0a0194");
+    expect(recipe.photos).toEqual([
+      { storage_id: "f33bef4a0a0194", url: expect.stringContaining("/f33bef4a0a0194/") },
+    ]);
+    expect(recipe).not.toHaveProperty("image_url");
   });
 
   it("turns blank numeric fields into null rather than 0", async () => {

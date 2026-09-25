@@ -9,7 +9,13 @@ import {
   type RawRecipeForm,
   type RecipeListPage,
 } from "./parse";
-import { formFromRecipe, recipeFromForm, type Recipe, type RecipeInput } from "./fields";
+import {
+  formFromRecipe,
+  recipeFromForm,
+  type Photo,
+  type Recipe,
+  type RecipeInput,
+} from "./fields";
 
 /** The stored credentials were rejected, or the session could not be renewed. */
 export class AuthError extends Error {
@@ -376,7 +382,7 @@ export class ReceptenmakerClient {
   async updateRecipe(id: string, patch: RecipeInput): Promise<Recipe> {
     const form = await this.loadRecipeForm(id);
     const current = recipeFromForm(form);
-    const { image_url: _ignored, ...currentFields } = current;
+    const { photos: _ignored, ...currentFields } = current;
 
     const merged: RecipeInput = {
       ...currentFields,
@@ -462,32 +468,79 @@ export class ReceptenmakerClient {
     }
 
     // The importer hands back the photo's source URL and leaves fetching it to a second
-    // call, the way the site's own page does after importing.
-    if (payload.photoUrl) await this.attachPhoto(id, payload.photoUrl);
+    // call, the way the site's own page does after importing. A photo that cannot be
+    // fetched does not undo an otherwise successful import.
+    if (payload.photoUrl) {
+      try {
+        await this.setHeaderPhoto(id, await this.savePhotoFromUrl(id, payload.photoUrl));
+      } catch (error) {
+        if (!(error instanceof UpstreamError)) throw error;
+      }
+    }
 
     return this.getRecipe(id);
   }
 
-  /** Stores a photo from its source URL against a recipe and makes it the header image. */
-  private async attachPhoto(recipeId: string, photoUrl: string): Promise<void> {
-    const response = await this.postForm(`${this.baseUrl}/php/photoFunctions.php`, {
-      function: "savePhoto",
-      objectID: recipeId,
-      photoUrl,
-    });
+  // --- photos ------------------------------------------------------------------
 
-    let saved: { status?: string; storageID?: string };
+  /** A recipe's photos, header first. */
+  async listPhotos(recipeId: string): Promise<Photo[]> {
+    return (await this.getRecipe(recipeId)).photos;
+  }
+
+  private async photoCall(
+    fields: Record<string, string>,
+    what: string,
+  ): Promise<{ status?: string; storageID?: string }> {
+    const response = await this.postForm(`${this.baseUrl}/php/photoFunctions.php`, fields);
     try {
-      saved = (await response.json()) as typeof saved;
+      return (await response.json()) as { status?: string; storageID?: string };
     } catch {
-      return; // The recipe imported fine; only its photo is missing.
+      throw new UpstreamError(`${what} failed: Receptenmaker returned a non-JSON response`);
     }
-    if (saved.status !== "ok" || !saved.storageID) return;
+  }
 
-    await this.postForm(`${this.baseUrl}/php/photoFunctions.php`, {
-      function: "setPhotoAsHead",
-      objectID: recipeId,
-      storageID: saved.storageID,
-    });
+  /**
+   * Adds a photo that Receptenmaker downloads from `url` itself, and returns its storage id.
+   * The recipe is checked first: against an unknown recipe id the site answers with a bare
+   * error instead of JSON.
+   */
+  async savePhotoFromUrl(recipeId: string, url: string): Promise<string> {
+    await this.loadRecipeForm(recipeId);
+    const saved = await this.photoCall(
+      { function: "savePhoto", objectID: recipeId, photoUrl: url },
+      "adding the photo",
+    );
+    if (saved.status === "failedImageDownload") {
+      throw new UpstreamError(`Receptenmaker could not download an image from ${url}`);
+    }
+    if (saved.status !== "ok" || !saved.storageID) {
+      throw new UpstreamError(`adding the photo failed (status "${saved.status ?? "unknown"}")`);
+    }
+    return saved.storageID;
+  }
+
+  async setHeaderPhoto(recipeId: string, storageId: string): Promise<void> {
+    const result = await this.photoCall(
+      { function: "setPhotoAsHead", objectID: recipeId, storageID: storageId },
+      "setting the header photo",
+    );
+    if (result.status !== "ok") {
+      throw new UpstreamError(`setting the header photo failed (status "${result.status ?? "unknown"}")`);
+    }
+  }
+
+  /**
+   * Upstream answers "ok" even for a storage id the recipe does not have, so callers must
+   * check membership themselves; see photos.ts.
+   */
+  async deletePhoto(recipeId: string, storageId: string): Promise<void> {
+    const result = await this.photoCall(
+      { function: "deletePhoto", objectID: recipeId, storageID: storageId },
+      "deleting the photo",
+    );
+    if (result.status !== "ok") {
+      throw new UpstreamError(`deleting the photo failed (status "${result.status ?? "unknown"}")`);
+    }
   }
 }

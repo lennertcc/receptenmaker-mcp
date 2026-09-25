@@ -3,7 +3,12 @@ import listHtml from "./fixtures/recipes-list.html?raw";
 import searchHtml from "./fixtures/recipes-search.html?raw";
 import editHtml from "./fixtures/recipe-edit.html?raw";
 import cookbooksHtml from "./fixtures/cookbooks.html?raw";
-import { AuthError, ReceptenmakerClient, UpstreamError } from "../src/rm/client";
+import {
+  AuthError,
+  RecipeNotFoundError,
+  ReceptenmakerClient,
+  UpstreamError,
+} from "../src/rm/client";
 
 const CREDS = { username: "testuser@example.com", password: "pw" };
 
@@ -318,5 +323,98 @@ describe("listAllRecipes", () => {
     );
     await rm.listAllRecipes({}, 2);
     expect(calls.filter((c) => c.url.includes("page=recipes"))).toHaveLength(2);
+  });
+});
+
+describe("photos (website)", () => {
+  const PHOTO_FNS = "/php/photoFunctions.php";
+
+  it("adds a photo from a url and returns its storage id", async () => {
+    const { rm, calls } = client((call) => {
+      if (call.url.includes("wp-login.php")) return loginOk();
+      if (call.url.includes(PHOTO_FNS)) {
+        return Response.json({ status: "ok", storageID: "newphoto12345" });
+      }
+      return html(editHtml);
+    });
+
+    expect(await rm.savePhotoFromUrl("4166830", "https://example.com/soep.jpg")).toBe(
+      "newphoto12345",
+    );
+    const post = calls.find((c) => c.url.includes(PHOTO_FNS))!;
+    const body = new URLSearchParams(post.body);
+    expect(body.get("function")).toBe("savePhoto");
+    expect(body.get("objectID")).toBe("4166830");
+    expect(body.get("photoUrl")).toBe("https://example.com/soep.jpg");
+  });
+
+  it("checks the recipe exists before attaching anything to it", async () => {
+    const { rm, calls } = client((call) =>
+      call.url.includes("wp-login.php") ? loginOk() : html(editHtml),
+    );
+    await expect(rm.savePhotoFromUrl("999", "https://example.com/x.jpg")).rejects.toThrow(
+      RecipeNotFoundError,
+    );
+    expect(calls.some((c) => c.url.includes(PHOTO_FNS))).toBe(false);
+  });
+
+  it("explains a url that is not a downloadable image", async () => {
+    const { rm } = client((call) => {
+      if (call.url.includes("wp-login.php")) return loginOk();
+      if (call.url.includes(PHOTO_FNS)) return Response.json({ status: "failedImageDownload" });
+      return html(editHtml);
+    });
+    await expect(rm.savePhotoFromUrl("4166830", "https://example.com/")).rejects.toThrow(
+      /could not download an image/i,
+    );
+  });
+
+  it("treats a non-JSON answer as a failure", async () => {
+    const { rm } = client((call) => {
+      if (call.url.includes("wp-login.php")) return loginOk();
+      if (call.url.includes(PHOTO_FNS)) return new Response("Error");
+      return html(editHtml);
+    });
+    await expect(rm.savePhotoFromUrl("4166830", "https://example.com/x.jpg")).rejects.toThrow(
+      UpstreamError,
+    );
+  });
+
+  it("sets the header photo and deletes photos with the site's own calls", async () => {
+    const { rm, calls } = client((call) => {
+      if (call.url.includes("wp-login.php")) return loginOk();
+      if (call.url.includes(PHOTO_FNS)) return Response.json({ status: "ok" });
+      return html(editHtml);
+    });
+    await rm.setHeaderPhoto("4166830", "f33bef4a0a0194");
+    await rm.deletePhoto("4166830", "f33bef4a0a0194");
+
+    const posts = calls.filter((c) => c.url.includes(PHOTO_FNS)).map((c) => new URLSearchParams(c.body));
+    expect(posts.map((b) => b.get("function"))).toEqual(["setPhotoAsHead", "deletePhoto"]);
+    for (const b of posts) {
+      expect(b.get("objectID")).toBe("4166830");
+      expect(b.get("storageID")).toBe("f33bef4a0a0194");
+    }
+  });
+
+  it("lists a recipe's photos, header first", async () => {
+    const { rm } = client((call) => (call.url.includes("wp-login.php") ? loginOk() : html(editHtml)));
+    expect(await rm.listPhotos("4166830")).toEqual([
+      { storage_id: "f33bef4a0a0194", url: expect.stringContaining("/f33bef4a0a0194/") },
+    ]);
+  });
+});
+
+describe("importRecipeFromUrl photo handling", () => {
+  it("still saves the recipe when its photo cannot be fetched", async () => {
+    const { rm } = client((call) => {
+      if (call.url.includes("wp-login.php")) return loginOk();
+      if (call.url.includes("/php/functions.php")) {
+        return Response.json({ status: "ok", objectID: "4166830", photoUrl: "https://x/p.jpg" });
+      }
+      if (call.url.includes("/php/photoFunctions.php")) return Response.json({ status: "failedImageDownload" });
+      return html(editHtml);
+    });
+    expect((await rm.importRecipeFromUrl("https://example.com/r")).id).toBe("4166830");
   });
 });

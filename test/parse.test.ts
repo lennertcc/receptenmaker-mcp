@@ -90,9 +90,30 @@ describe("parseRecipeForm", () => {
     expect(form.cookbookIds).toEqual([]);
   });
 
-  it("returns the recipe image url", async () => {
+  it("returns each photo with its storage id", async () => {
     const form = await parseRecipeForm(editHtml);
-    expect(form.imageUrls[0]).toContain("f33bef4a0a0194");
+    expect(form.photos).toHaveLength(1);
+    expect(form.photos[0].storageId).toBe("f33bef4a0a0194");
+    expect(form.photos[0].url).toContain("/f33bef4a0a0194/");
+  });
+
+  it("keeps photo order, which puts the header photo first", async () => {
+    const second =
+      '<img data-storage-id="aaaabbbbcccc11" class="recipeImage" src="https://s3.example/recepten/images/aaaabbbbcccc11/400x300/image.jpg"/>';
+    const html = editHtml.replace(/(<img[^>]*class="recipeImage"[^>]*>)/, `$1${second}`);
+    const form = await parseRecipeForm(html);
+    expect(form.photos.map((p) => p.storageId)).toEqual(["f33bef4a0a0194", "aaaabbbbcccc11"]);
+  });
+
+  it("falls back to the storage id in the url when the attribute is missing", async () => {
+    const html = editHtml.replace(/data-storage-id="[^"]*"\s*/, "");
+    const form = await parseRecipeForm(html);
+    expect(form.photos[0].storageId).toBe("f33bef4a0a0194");
+  });
+
+  it("reports no photos for a recipe without any", async () => {
+    const html = editHtml.replace(/<img[^>]*class="recipeImage"[^>]*>/g, "");
+    expect((await parseRecipeForm(html)).photos).toEqual([]);
   });
 
   it("handles a recipe with no categories and a source url", async () => {

@@ -73,7 +73,13 @@ export interface Recipe {
   nutrition: Nutrition;
   categories: string[];
   cookbook_ids: string[];
-  image_url: string | null;
+  /** Header photo first. */
+  photos: Photo[];
+}
+
+export interface Photo {
+  storage_id: string;
+  url: string;
 }
 
 /** A partial recipe: an absent key is left alone, an explicit null clears the field. */
@@ -133,7 +139,7 @@ export function recipeFromForm(form: RawRecipeForm): Recipe {
     nutrition,
     categories: form.categories,
     cookbook_ids: form.cookbookIds,
-    image_url: form.imageUrls[0] ?? null,
+    photos: form.photos.map((p) => ({ storage_id: p.storageId, url: p.url })),
   };
 }
 

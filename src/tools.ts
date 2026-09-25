@@ -10,6 +10,14 @@ import {
 import { ParseError, type RecipeListItem } from "./rm/parse";
 import { CATEGORIES } from "./rm/fields";
 import type { ReceptenmakerAppClient } from "./rm/app-client";
+import {
+  InvalidImageError,
+  PhotoNotFoundError,
+  addPhoto,
+  removePhoto,
+  setHeaderPhoto,
+  type PhotoDeps,
+} from "./rm/photos";
 
 const SITE = "https://www.receptenmaker.com";
 
@@ -39,6 +47,8 @@ async function guarded(run: () => Promise<unknown>): Promise<ToolResult> {
       );
     }
     if (error instanceof RecipeNotFoundError) return fail(error.message);
+    if (error instanceof PhotoNotFoundError) return fail(`${error.message}; get_recipe lists its photos`);
+    if (error instanceof InvalidImageError) return fail(error.message);
     if (error instanceof UpstreamError) return fail(error.message);
     if (error instanceof ParseError) {
       return fail(
@@ -180,7 +190,7 @@ export function registerTools(server: McpServer, clients: Clients): void {
     {
       title: "Get a recipe",
       description:
-        "Read one recipe in full: ingredients, instructions, notes, times, servings, nutrition, categories and cookbooks.",
+        "Read one recipe in full: ingredients, instructions, notes, times, servings, nutrition, categories, cookbooks and photos. The first photo is the header photo.",
       inputSchema: { id: z.string().describe("Recipe id, as returned by search_recipes.") },
       annotations: { readOnlyHint: true },
     },
@@ -287,6 +297,74 @@ export function registerTools(server: McpServer, clients: Clients): void {
     },
     async ({ id, mode }) =>
       guarded(async () => withUrls(await getClient().shareRecipe(id, mode))),
+  );
+
+  const photoDeps: PhotoDeps = {
+    listPhotos: (id) => clients.web().listPhotos(id),
+    saveFromUrl: (id, url) => clients.web().savePhotoFromUrl(id, url),
+    upload: (id, data) => clients.app().uploadPhoto(id, data),
+    setHeader: (id, storageId) => clients.web().setHeaderPhoto(id, storageId),
+    remove: (id, storageId) => clients.web().deletePhoto(id, storageId),
+  };
+
+  server.registerTool(
+    "add_recipe_photo",
+    {
+      title: "Add a photo to a recipe",
+      description:
+        "Add a photo to a recipe, from a public image URL or from base64-encoded JPEG or PNG data (up to 10 MB; Receptenmaker scales it to 400×300). Give exactly one of url and image_base64. By default the new photo becomes the header photo, so this is also how to replace a recipe's photo; the earlier photos stay until removed with delete_recipe_photo.",
+      inputSchema: {
+        id: z.string().describe("Recipe id."),
+        url: z.string().url().optional().describe("Public image URL; Receptenmaker downloads it itself."),
+        image_base64: z
+          .string()
+          .optional()
+          .describe("JPEG or PNG bytes, base64-encoded. A data: URL is accepted too."),
+        make_header: z.boolean().optional().describe("Make it the header photo. Defaults to true."),
+      },
+      annotations: { readOnlyHint: false },
+    },
+    async ({ id, url, image_base64, make_header }) =>
+      guarded(async () => {
+        if (Boolean(url) === Boolean(image_base64)) {
+          throw new InvalidImageError("give exactly one of url and image_base64");
+        }
+        const source = url ? { url } : { imageBase64: image_base64! };
+        const storageId = await addPhoto(photoDeps, id, source, make_header ?? true);
+        return { added_storage_id: storageId, ...withUrls(await clients.web().getRecipe(id)) };
+      }),
+  );
+
+  server.registerTool(
+    "set_recipe_header_photo",
+    {
+      title: "Set a recipe's header photo",
+      description:
+        "Make one of a recipe's existing photos its header photo, the one shown in lists and at the top of the recipe. Storage ids come from get_recipe.",
+      inputSchema: { id: z.string(), storage_id: z.string() },
+      annotations: { readOnlyHint: false },
+    },
+    async ({ id, storage_id }) =>
+      guarded(async () => {
+        await setHeaderPhoto(photoDeps, id, storage_id);
+        return withUrls(await clients.web().getRecipe(id));
+      }),
+  );
+
+  server.registerTool(
+    "delete_recipe_photo",
+    {
+      title: "Delete a recipe photo",
+      description:
+        "Permanently remove one photo from a recipe. Storage ids come from get_recipe. This cannot be undone — confirm with the user first.",
+      inputSchema: { id: z.string(), storage_id: z.string() },
+      annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+    },
+    async ({ id, storage_id }) =>
+      guarded(async () => {
+        await removePhoto(photoDeps, id, storage_id);
+        return withUrls(await clients.web().getRecipe(id));
+      }),
   );
 
   server.registerTool(

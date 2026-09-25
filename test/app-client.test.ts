@@ -211,3 +211,20 @@ describe("deleteCookbook", () => {
     expect(calls[1].json).toMatchObject({ function: "deleteKookboek", kookboekID: "85234" });
   });
 });
+
+describe("uploadPhoto", () => {
+  it("posts base64 image data against the recipe and returns the storage id", async () => {
+    const { app, calls } = client({ savePhoto: { status: "ok", isSquare: "0", storageID: "up1oad1d12345" } });
+    expect(await app.uploadPhoto("4166830", "/9j/4AAQ+SkZJRg==")).toBe("up1oad1d12345");
+
+    const save = calls.find((c) => c.body.includes("savePhoto"))!;
+    // Base64 contains '+', which travels escaped exactly as the app sends it.
+    expect(save.body).toContain("/9j/4AAQplussignSkZJRg==");
+    expect(save.body).toContain('"objectID":"4166830"');
+  });
+
+  it("reports a rejected upload as an upstream error", async () => {
+    const { app } = client({ savePhoto: { status: "failed" } });
+    await expect(app.uploadPhoto("4166830", "AAAA")).rejects.toThrow(UpstreamError);
+  });
+});

@@ -104,7 +104,13 @@ export interface RawRecipeForm {
   cookbookIds: string[];
   availableCookbookIds: string[];
   nonce: string | null;
-  imageUrls: string[];
+  /** In the order the site lists them, which puts the header photo first. */
+  photos: RawPhoto[];
+}
+
+export interface RawPhoto {
+  storageId: string;
+  url: string;
 }
 
 /**
@@ -171,10 +177,12 @@ export async function parseRecipeForm(html: string): Promise<RawRecipeForm> {
     cookbookIds,
     availableCookbookIds,
     nonce: form.querySelector('input[name="plugin_settings_nonce"]')?.getAttribute("value") ?? null,
-    imageUrls: form
-      .querySelectorAll("img.recipeImage")
-      .map((img) => img.getAttribute("src"))
-      .filter((src): src is string => Boolean(src)),
+    photos: form.querySelectorAll("img.recipeImage").flatMap((img) => {
+      const url = img.getAttribute("src");
+      const storageId =
+        img.getAttribute("data-storage-id") ?? url?.match(/\/images\/([a-z0-9]+)\//)?.[1];
+      return url && storageId ? [{ storageId, url }] : [];
+    }),
   };
 }
 

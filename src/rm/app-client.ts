@@ -204,4 +204,23 @@ export class ReceptenmakerAppClient {
   async deleteCookbook(id: string): Promise<void> {
     await this.expectOk("deleteKookboek", { kookboekID: id }, `deleting cookbook ${id}`);
   }
+
+  /**
+   * Uploads image bytes, base64-encoded, as a new photo on a recipe and returns its storage
+   * id. Recipe ids are shared with the website. The bytes must be validated beforehand:
+   * for data that is not an image, upstream reports failure yet still stores a broken
+   * photo entry.
+   */
+  async uploadPhoto(recipeId: string, imageBase64: string): Promise<string> {
+    const payload = await this.expectOk(
+      "savePhoto",
+      { objectID: recipeId, imgData: imageBase64 },
+      "uploading the photo",
+    );
+    const id = payload.storageID;
+    if (typeof id !== "string" || id === "") {
+      throw new UpstreamError("the photo was uploaded but Receptenmaker returned no storage id");
+    }
+    return id;
+  }
 }
